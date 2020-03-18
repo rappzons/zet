@@ -7,8 +7,8 @@ const main = (parentElementId, scenes) => {
 
     const config = {
         type: Phaser.AUTO,
-        width: 1200,
-        height: 600,
+        width: 1600,
+        height: 800,
         backgroundColor: '#1b1464',
         parent: parentElementId,
         physics: {

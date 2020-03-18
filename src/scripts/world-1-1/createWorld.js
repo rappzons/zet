@@ -22,30 +22,41 @@ export default class Level1_1Scene extends Scene {
     }
 
     create() {
-        this.matter.add.image(this.game.canvas.width / 2, this.game.canvas.height, 'ground').setStatic(true);
+        const ground = this.matter.add.image(this.game.canvas.width / 2, this.game.canvas.height - 100, 'ground').setStatic(true);
+        ground.displayHeight = 90;
+        ground.displayWidth = this.game.canvas.width;
+
+      /*  const ground2 = this.matter.add.image(600, 650, 'ground').setStatic(true);
+        ground2.displayHeight = 100;
+        ground2.displayWidth = 200;
+
+        const ground3 = this.matter.add.image(900, 550, 'ground').setStatic(true);
+        ground3.displayHeight = 150;
+        ground3.displayWidth = 100;*/
+
+        ground.body.type = ['dead-object'];
+      //  ground2.body.type = ['dead-object'];
+
         console.log("Created World 1-1, adding player");
 
         this.player = Object.create(Player);
         this.player.init(this);
 
         this.matter.world.on('collisionstart', function (event) {
-
             var pairs = event.pairs;
 
-            for (var i = 0; i < pairs.length; i++) {
-                var bodyA = pairs[i].bodyA;
-                var bodyB = pairs[i].bodyB;
+            pairs.forEach((pair) => {
+                const bodyA = pair.bodyA;
+                const bodyB = pair.bodyB;
 
-                console.log("bodya : ", bodyA.zData.type);
-                console.log("bodyb : ", bodyB.zData.type);
-//Force here can be used to detect angle. force = {x: 0, y: 0.2} means hit from below...
-                console.log("bodyA force : ", bodyA.force);
-                console.log("bodyB force : ", bodyB.force);
-
-            }
-
+                if(bodyA.zetParent && bodyA.zetParent.type.includes('collidable')) {
+                    bodyA.zetParent.onCollide(bodyB);
+                }
+                else if(bodyB.zetParent && bodyB.zetParent.type.includes('collidable')) {
+                    bodyB.zetParent.onCollide(bodyA);
+                }
+            });
         });
-
     }
 
     update() {
