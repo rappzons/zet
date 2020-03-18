@@ -1,6 +1,6 @@
 import {Scene} from "phaser";
 import Player from "../player";
-
+import {random} from '../utils';
 
 export default class Level1_1Scene extends Scene {
     constructor() {
@@ -13,7 +13,11 @@ export default class Level1_1Scene extends Scene {
 
     preload() {
         console.log("Loading World 1-1 resources");
-        this.load.image('ground', './assets/world/grounds/gravel_and_grass_ground.png');
+        this.load.image('ground', './assets/world/grounds/debug_ground.png');
+
+        this.load.image('virus_ball', './assets/sprites/virus_ball.png');
+
+        this.load.image('debug', './assets/sprites/debug.png');
 
         this.load.spritesheet('dude',
             './assets/sprites/pacman_28x28.png',
@@ -22,20 +26,18 @@ export default class Level1_1Scene extends Scene {
     }
 
     create() {
-        const ground = this.matter.add.image(this.game.canvas.width / 2, this.game.canvas.height - 100, 'ground').setStatic(true);
-        ground.displayHeight = 90;
-        ground.displayWidth = this.game.canvas.width;
 
-      /*  const ground2 = this.matter.add.image(600, 650, 'ground').setStatic(true);
-        ground2.displayHeight = 100;
-        ground2.displayWidth = 200;
 
-        const ground3 = this.matter.add.image(900, 550, 'ground').setStatic(true);
-        ground3.displayHeight = 150;
-        ground3.displayWidth = 100;*/
+        this.createGround(this.matter, (this.game.canvas.width / 4) - 100, this.game.canvas.height, (this.game.canvas.width /2),100);
+        this.createGround(this.matter, (this.game.canvas.width * 0.75) + 100, this.game.canvas.height, (this.game.canvas.width /2) - 100,100);
 
-        ground.body.type = ['dead-object'];
-      //  ground2.body.type = ['dead-object'];
+        const objects = random(1, 20);
+        for(var i=0; i<objects; i++) {
+            this.createGround(this.matter, random(0,this.game.canvas.width),random(200,this.game.canvas.height-100), random(20,200), random(20,200));
+        }
+
+        this.time.addEvent({ delay: 3250, callback: this.createBall.bind(this.matter), callbackScope: this, repeat: 4012 });
+
 
         console.log("Created World 1-1, adding player");
 
@@ -46,6 +48,7 @@ export default class Level1_1Scene extends Scene {
             var pairs = event.pairs;
 
             pairs.forEach((pair) => {
+
                 const bodyA = pair.bodyA;
                 const bodyB = pair.bodyB;
 
@@ -59,6 +62,21 @@ export default class Level1_1Scene extends Scene {
         });
     }
 
+    createGround(matter, x,y,w,h) {
+        const ground = matter.add.image(x, y, 'ground').setStatic(true);
+        ground.displayHeight = h;
+        ground.displayWidth = w;
+        ground.tint = '0xeeee11';
+        ground.body.type = ['dead-object'];
+    }
+
+    createBall() {
+
+        var ball = this.add.image(random(100,800), -100, 'virus_ball', null, { isStatic: true });
+        ball.setCircle(10);
+        ball.body.type = ['dead-object','edible'];
+        //ball.body.id = random(0,10000);
+    }
     update() {
        this.player.onGameUpdate(this);
     }

@@ -1,5 +1,4 @@
-import Rect from './utils'
-import Phaser from 'phaser'
+import {Rect} from './utils'
 
 const WORLD_CONSTANTS = {
     //If velocity goes below this value its considered to be ZERO
@@ -18,14 +17,14 @@ const STATES = {
 };
 
 const PlayerConfig = {
-
-    friction: 0.05,
-    frictionAir: 0.005,
-    mass: 20,
-    bounce: 0.15,
+    friction: 0.08,
+    frictionAir: 0.001,
+    mass: 40,
+    bounce: 0.05,
     maxSpeed: 8,
-    jumpForce: 0.8,
-    accelerationForce: 0.05,
+    jumpForce: 0.7,
+    accelerationForce: 0.07,
+    accelerationForceAir: 0.01,
     debugLogStateEveryMs: 1000,
 };
 const Player = {
@@ -39,7 +38,8 @@ const Player = {
         xp: 0,
     },
     cursors: {},
-    physicalObject: {}, // GameEngine body/view representation
+    physicalObject: {}, // GameEngine body representation
+    hitBox: {}, // GameEngine view representation
 
     // Callback that something hit the Player
     onCollide(collider) {
@@ -48,16 +48,20 @@ const Player = {
         if(collider.type.includes('dead-object')) {
 
             // Hit something solid from below but with no side-effect
-           if(this.physicalObject.body.force.y > WORLD_CONSTANTS.MINIMUM_FORCE) {
-
-               console.log("HIT something, force:", this.physicalObject.body.angle, collider.angle);
-               //Check that only feet intersects...
+            if (this.physicalObject.body.force.y > WORLD_CONSTANTS.MINIMUM_FORCE) {
 
 
+                if (collider.type && collider.type.includes('edible')) {
+                    console.log("Eating virus!!", collider);
 
-               this.state.add(STATES.ON_GROUND);
-               this.state.delete(STATES.IN_AIR);
+                    if (collider.gameObject) {
+                        collider.gameObject.world.remove(collider.gameObject, true);
+                        collider.gameObject.destroy(false);
+                        this.gameWorld.matter.world.localWorld.bodies = this.gameWorld.matter.world.localWorld.bodies.filter(b => b.id !== collider.id);
 
+                        this.status.xp = this.status.xp + 1;
+                    }
+                }
             }
         }
     },
@@ -66,22 +70,31 @@ const Player = {
     init(gameWorld) {
 
 
+        this.gameWorld = gameWorld;
+        this.hitBox = gameWorld.matter.bodies.rectangle(0, 0, 28, 28);
+        this.hitBox.zetParent = this;
+        this.debugFeetRectangle = gameWorld.matter.bodies.rectangle(0, 10, 10, 20,{
+            isSensor: true,
+        });
 
-        this.physicalObject = gameWorld.matter.add.sprite(400, 100, 'dude');
+        const playerParts = gameWorld.matter.body.create({
+            parts: [ this.hitBox, this.debugFeetRectangle ]
+        });
+
+        this.physicalObject = gameWorld.matter.add.sprite(0, -5, 'dude');
+
+        // Reference to the game world to be able to invoke callback methods on this Player Object
+        this.physicalObject.body.zetParent = this;
+
+        this.physicalObject.setExistingBody(playerParts);
+
+        this.physicalObject.setOrigin(0.5,0.5);
         this.physicalObject.setFriction(PlayerConfig.friction);
         this.physicalObject.setFrictionAir(PlayerConfig.frictionAir);
         this.physicalObject.setFixedRotation();
         this.physicalObject.setMass(PlayerConfig.mass);
         this.physicalObject.setBounce(PlayerConfig.bounce);
-        // Reference to the game world to be able to invoke callback methods on this Player Object
-        this.physicalObject.body.zetParent = this;
-
-
-        this.debugFeetRectangle = gameWorld.add.graphics({ fillStyle:{ color: 0xaa0000 } });
-
-
-        this.debugFeetRectangle.fillRectShape(new Phaser.Geom.Rectangle(this.physicalObject.x,  this.physicalObject.y,10,10));
-
+        this.physicalObject.setPosition(200,110);
 
         this.cursors = gameWorld.input.keyboard.createCursorKeys();
 
@@ -112,7 +125,9 @@ const Player = {
 
     onGameUpdate(gameWorld) {
 
-        this.debugFeetRectangle.setPosition(this.physicalObject.x, this.physicalObject.y);
+
+
+        //this.debugFeetRectangle.render.fillStyle = 'red';
         //Can only move or jump if on the ground
 
         //TODO: left or right facing? Can perhaps determine from the actual Sprite angle...
@@ -144,7 +159,7 @@ const Player = {
                     }
 
 
-                    return part.calcRect.intersects(this.getFeetRectangle());
+                    return part.calcRect.intersectsBounds(this.debugFeetRectangle.bounds);
                 })
             }
             return false;
@@ -167,26 +182,28 @@ const Player = {
             this.state.add(STATES.STILL);
         }
 
-        //Check intersections on the "feet" if any solid object then your on the ground:
-        //if(this.physicalObject.intersectPoint(this.physicalObject.x, this.physicalObject.y)) {
-          //  this.state.add(STATES.ON_GROUND);
-       // }
-
-        if(this.state.has(STATES.ON_GROUND)) {
-
             if (this.cursors.left.isDown)
             {
                 if(absVelocityX < PlayerConfig.maxSpeed) {
-                    this.state.delete(STATES.RIGHT_FACING);
-                    this.physicalObject.thrustBack(PlayerConfig.accelerationForce);
+
+                    if(this.state.has(STATES.IN_AIR)) {
+                        this.physicalObject.thrustBack(PlayerConfig.accelerationForceAir);
+                    } else {
+                        this.state.delete(STATES.RIGHT_FACING);
+                        this.physicalObject.thrustBack(PlayerConfig.accelerationForce);
+                    }
                 }
                 this.physicalObject.anims.play('left', true);
             }
             else if (this.cursors.right.isDown)
             {
                 if(absVelocityX < PlayerConfig.maxSpeed) {
-                    this.state.delete(STATES.LEFT_FACING);
-                    this.physicalObject.thrust(PlayerConfig.accelerationForce);
+                    if(this.state.has(STATES.IN_AIR)) {
+                        this.physicalObject.thrust(PlayerConfig.accelerationForceAir);
+                    } else {
+                        this.state.delete(STATES.LEFT_FACING);
+                        this.physicalObject.thrust(PlayerConfig.accelerationForce);
+                    }
                 }
                 this.physicalObject.anims.play('right', true);
             }
@@ -196,17 +213,18 @@ const Player = {
                 this.state.add(STATES.STILL);
             }
 
-            if (this.cursors.up.isDown)
+            if (this.cursors.up.isDown && this.state.has(STATES.ON_GROUND) && this.getVelocity().y < PlayerConfig.accelerationForce)
             {
                 this.state.delete(STATES.ON_GROUND);
                 this.state.add(STATES.IN_AIR);
                 this.state.delete(STATES.STILL);
                 this.physicalObject.thrustLeft(PlayerConfig.jumpForce);
             }
-        }
 
         //TODO: this slows down/speeds up adnimation frames based on velocity, is very dependant on the graphical frames (the pics)
         this.physicalObject.anims.setTimeScale(absVelocityX / 4);
+///        this.debugFeetRectangle.position.x = this.physicalObject.position.x ;
+   //     this.debugFeetRectangle.position.y = this.physicalObject.position.y + 18;
     },
 
     getVelocity() {
@@ -222,13 +240,7 @@ const Player = {
             SPEED: "X:" + this.getVelocity().x + ",Y:"+this.getVelocity().y,
         }
     },
-    getFeetRectangle() {
 
-        return new Rect(this.physicalObject.x - (this.physicalObject.width / 2), this.physicalObject.y + (this.physicalObject.height / 2),
-                this.physicalObject.width,
-                this.physicalObject.height);
-
-    }
 };
 
 export default Player;
