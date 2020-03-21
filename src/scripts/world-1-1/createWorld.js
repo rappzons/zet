@@ -28,6 +28,7 @@ export default class Level1_1Scene extends Scene {
     create() {
 
 
+        this.matter.world.setBounds(0,-500,1600,1300);
         this.createGround(this.matter, (this.game.canvas.width / 4) - 100, this.game.canvas.height, (this.game.canvas.width /2),100);
         this.createGround(this.matter, (this.game.canvas.width * 0.75) + 100, this.game.canvas.height, (this.game.canvas.width /2) - 100,100);
 
@@ -67,14 +68,14 @@ export default class Level1_1Scene extends Scene {
         ground.displayHeight = h;
         ground.displayWidth = w;
         ground.tint = '0xeeee11';
-        ground.body.type = ['dead-object'];
+        ground.body.ztype = ['dead-object'];
     }
 
     createBall() {
 
         var ball = this.add.image(random(100,800), -100, 'virus_ball', null, { isStatic: true });
         ball.setCircle(10);
-        ball.body.type = ['dead-object','edible'];
+        ball.body.ztype = ['dead-object','edible'];
         //ball.body.id = random(0,10000);
     }
     update() {
