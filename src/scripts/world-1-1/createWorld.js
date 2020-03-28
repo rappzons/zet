@@ -19,9 +19,9 @@ export default class Level1_1Scene extends Scene {
 
         this.load.image('debug', './assets/sprites/debug.png');
 
-        this.load.spritesheet('dude',
-            './assets/sprites/pacman_28x28.png',
-            {frameWidth: 28, frameHeight: 28}
+        this.load.spritesheet('player',
+            './assets/sprites/adventure-player.png',
+            {frameWidth: 50, frameHeight: 37},null, 109
         );
     }
 

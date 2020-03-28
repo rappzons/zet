@@ -1,4 +1,4 @@
-import {Rect} from './utils'
+import {random, Rect} from './utils'
 
 const WORLD_CONSTANTS = {
     //If velocity goes below this value its considered to be ZERO
@@ -13,6 +13,7 @@ const STATES = {
     IN_AIR: 'in-air',
     LEFT_FACING: 'left-facing',
     RIGHT_FACING: 'right-facing',
+    FALLING: 'falling',
 
 };
 
@@ -26,6 +27,8 @@ const PlayerConfig = {
     accelerationForce: 0.07,
     accelerationForceAir: 0.01,
     debugLogStateEveryMs: 1000,
+    scale: 2,
+    minTimeBetweenJumpsMs: 400,
 };
 const Player = {
 
@@ -38,8 +41,9 @@ const Player = {
         xp: 0,
     },
     cursors: {},
-    physicalObject: {}, // GameEngine body representation
-    hitBox: {}, // GameEngine view representation
+    playerSprite: {}, // GameEngine sprite representation
+    hitBox: {}, // GameEngine physics
+    lastJumpTimeStamp: 0,
 
     // Callback that something hit the Player
     onCollide(collider) {
@@ -57,9 +61,9 @@ const Player = {
     //Initialise animations and event listeners
     init(gameWorld) {
 
-        this.hitBox = gameWorld.matter.bodies.rectangle(0, 0, 28, 28);
+        this.hitBox = gameWorld.matter.bodies.rectangle(0, 0, 18 * PlayerConfig.scale, 30 *  PlayerConfig.scale);
         this.hitBox.zetParent = this;
-        this.debugFeetRectangle = gameWorld.matter.bodies.rectangle(0, 10, 10, 20, {
+        this.debugFeetRectangle = gameWorld.matter.bodies.rectangle(0, 15 *  PlayerConfig.scale, 10 *  PlayerConfig.scale, 2 *  PlayerConfig.scale, {
             isSensor: true,
         });
 
@@ -67,148 +71,82 @@ const Player = {
             parts: [this.hitBox, this.debugFeetRectangle]
         });
 
-        this.physicalObject = gameWorld.matter.add.sprite(0, -5, 'dude');
+        this.playerSprite = gameWorld.matter.add.sprite(0, 0, 'player').setScale(PlayerConfig.scale);
 
         // Reference to the game world to be able to invoke callback methods on this Player Object
-        this.physicalObject.body.zetParent = this;
+        this.playerSprite.body.zetParent = this;
 
-        this.physicalObject.setExistingBody(playerParts);
+        this.playerSprite.setExistingBody(playerParts);
 
-        this.physicalObject.setOrigin(0.5, 0.5);
-        this.physicalObject.setFriction(PlayerConfig.friction);
-        this.physicalObject.setFrictionAir(PlayerConfig.frictionAir);
-        this.physicalObject.setFixedRotation();
-        this.physicalObject.setMass(PlayerConfig.mass);
-        this.physicalObject.setBounce(PlayerConfig.bounce);
-        this.physicalObject.setPosition(200, 110);
+        this.playerSprite.setOrigin(0.5, 0.6);
+        this.playerSprite.setFriction(PlayerConfig.friction);
+        this.playerSprite.setFrictionAir(PlayerConfig.frictionAir);
+        this.playerSprite.setFixedRotation();
+        this.playerSprite.setMass(PlayerConfig.mass);
+        this.playerSprite.setBounce(PlayerConfig.bounce);
+        this.playerSprite.setPosition(200, 110);
 
         this.cursors = gameWorld.input.keyboard.createCursorKeys();
 
         gameWorld.anims.create({
-            key: 'left',
-            frames: gameWorld.anims.generateFrameNumbers('dude', {start: 7, end: 10}),
+            key: 'still',
+            frames: gameWorld.anims.generateFrameNumbers('player', {start: 0, end: 1}),
+            yoyo: true,
+            frameRate: 1,
+            repeatDelay: 3000,
+            delay:1000,
+            repeat: -1
+        });
+
+        gameWorld.anims.create({
+            key: 'running',
+            frames: gameWorld.anims.generateFrameNumbers('player', {start: 8, end: 13}),
             frameRate: 10,
             repeat: -1
         });
 
         gameWorld.anims.create({
-            key: 'turn',
-            frames: [{key: 'dude', frame: 5}],
-            frameRate: 20
+            key: 'in-air-up',
+            frames: gameWorld.anims.generateFrameNumbers('player', {start: 16, end: 18}),
+            repeat: -1,
         });
 
         gameWorld.anims.create({
-            key: 'right',
-            frames: gameWorld.anims.generateFrameNumbers('dude', {start: 0, end: 3}),
-            frameRate: 10,
-            repeat: -1
+            key: 'in-air-falling',
+            frames: gameWorld.anims.generateFrameNumbers('player', {start: 22, end: 23}),
+            repeat: -1,
         });
+
 
         // if(PlayerConfig.debugLogStateEveryMs) {
         //    setInterval(() =>{gameWorld.emit('playerStatsUpdate');console.log(this.getPlayerStats())}, PlayerConfig.debugLogStateEveryMs);
         //}
     },
 
-    onGameUpdate(gameWorld) {
-
-        //this.debugFeetRectangle.render.fillStyle = 'red';
-        //Can only move or jump if on the ground
-
-        //TODO: left or right facing? Can perhaps determine from the actual Sprite angle...
-
-        if (this.physicalObject.anims && this.physicalObject.anims.currentAnim) {
-            switch (this.physicalObject.anims.currentAnim.key) {
-                case 'left':
-                    this.state.add(STATES.LEFT_FACING);
-                    break;
-                case 'right':
-                    this.state.add(STATES.RIGHT_FACING);
-                    break;
-                default:
-                    this.state.delete(STATES.RIGHT_FACING);
-                    this.state.delete(STATES.LEFT_FACING);
-
-            }
-        }
-
-        const onGround = gameWorld.children.list.find((obj) => {
-            if (obj.body && obj.body.ztype && obj.body.ztype.includes('dead-object') && obj.body.parts) {
-                return obj.body.parts.find((part) => {
-
-                    //This will not work for moving objects!!!
-                    if (!part.calcRect) {
-                        part.calcRect = new Rect(part.bounds.min.x, part.bounds.min.y,
-                            part.bounds.max.x - part.bounds.min.x,
-                            part.bounds.max.y - part.bounds.min.y);
-                    }
-
-
-                    return part.calcRect.intersectsBounds(this.debugFeetRectangle.bounds);
-                })
-            }
-            return false;
-        });
-
-        if (onGround) {
-            this.state.add(STATES.ON_GROUND);
-            this.state.delete(STATES.IN_AIR);
-        }
+    /**
+     * World tick-event
+     * @param gameWorld
+     */
+    onGameUpdate: function (gameWorld) {
 
         const absVelocityX = Math.abs(this.getVelocity().x);
         const absVelocityY = Math.abs(this.getVelocity().y);
 
-        if (absVelocityX > WORLD_CONSTANTS.MINIMUM_VELOCITY || absVelocityY > WORLD_CONSTANTS.MINIMUM_VELOCITY) {
-            this.state.delete(STATES.STILL);
-            this.state.add(STATES.MOVING);
-        } else {
-            this.state.delete(STATES.MOVING);
-            this.state.add(STATES.STILL);
-        }
+        // Order is important here, first check current state:
+        this.processCurrentPlayerState(gameWorld, {absVelocityX, absVelocityY});
 
-        if (this.cursors.left.isDown) {
-            if (absVelocityX < PlayerConfig.maxSpeed) {
+        // Then process any new user-input
+        this.processInput({absVelocityX});
 
-                if (this.state.has(STATES.IN_AIR)) {
-                    this.physicalObject.thrustBack(PlayerConfig.accelerationForceAir);
-                } else {
-                    this.state.delete(STATES.RIGHT_FACING);
-                    this.physicalObject.thrustBack(PlayerConfig.accelerationForce);
-                }
-            }
-            this.physicalObject.anims.play('left', true);
-        } else if (this.cursors.right.isDown) {
-            if (absVelocityX < PlayerConfig.maxSpeed) {
-                if (this.state.has(STATES.IN_AIR)) {
-                    this.physicalObject.thrust(PlayerConfig.accelerationForceAir);
-                } else {
-                    this.state.delete(STATES.LEFT_FACING);
-                    this.physicalObject.thrust(PlayerConfig.accelerationForce);
-                }
-            }
-            this.physicalObject.anims.play('right', true);
-        }
-        //Player is now almost resting
-        else if (absVelocityX < WORLD_CONSTANTS.MINIMUM_VELOCITY) {
-            this.physicalObject.anims.play('turn');
-            this.state.add(STATES.STILL);
-        }
-
-        if (this.cursors.up.isDown && this.state.has(STATES.ON_GROUND) && this.getVelocity().y < PlayerConfig.accelerationForce) {
-            this.state.delete(STATES.ON_GROUND);
-            this.state.add(STATES.IN_AIR);
-            this.state.delete(STATES.STILL);
-            this.physicalObject.thrustLeft(PlayerConfig.jumpForce);
-        }
-
-        //TODO: this slows down/speeds up adnimation frames based on velocity, is very dependant on the graphical frames (the pics)
-        this.physicalObject.anims.setTimeScale(absVelocityX / 4);
-///        this.debugFeetRectangle.position.x = this.physicalObject.position.x ;
-        //     this.debugFeetRectangle.position.y = this.physicalObject.position.y + 18;
+        // Then decide what the user is supposed to be looking like
+        this.setPlayerAnimations(gameWorld, {absVelocityX});
     },
 
+
+
     getVelocity() {
-        if (this.physicalObject && this.physicalObject.body && this.physicalObject.body.velocity) {
-            return this.physicalObject.body.velocity;
+        if (this.playerSprite && this.playerSprite.body && this.playerSprite.body.velocity) {
+            return this.playerSprite.body.velocity;
         }
         return {x: 0, y: 0}
     },
@@ -219,6 +157,139 @@ const Player = {
             SPEED: "X:" + this.getVelocity().x + ",Y:" + this.getVelocity().y,
         }
     },
+
+    tryJump: function () {
+        if(this.state.has(STATES.ON_GROUND) && this.lastJumpTimeStamp < (window.performance.now() - PlayerConfig.minTimeBetweenJumpsMs)) {
+            this.lastJumpTimeStamp = window.performance.now();
+            this.playerSprite.thrustLeft(PlayerConfig.jumpForce);
+        }
+    },
+
+    tryMove: function(inputData, direction) {
+        const airborne = this.state.has(STATES.IN_AIR);
+
+        if (inputData.absVelocityX < PlayerConfig.maxSpeed) {
+                direction === 'right' ?
+                    this.playerSprite.thrust(airborne ? PlayerConfig.accelerationForceAir : PlayerConfig.accelerationForce) :
+                    this.playerSprite.thrustBack(airborne ? PlayerConfig.accelerationForceAir : PlayerConfig.accelerationForce);
+            this.state.delete(direction === 'right' ? STATES.LEFT_FACING : STATES.RIGHT_FACING);
+            this.state.add(direction === 'right' ? STATES.RIGHT_FACING : STATES.LEFT_FACING);
+            this.state.add(STATES.MOVING);
+        }
+
+
+
+    },
+    /**
+     * Set animation depending on player states
+     */
+    setPlayerAnimations: function(gameWorld, inputData) {
+
+        //If airborne
+        if(this.state.has(STATES.IN_AIR)) {
+
+            if(this.state.has(STATES.FALLING)) {
+                this.playerSprite.anims.play('in-air-falling', true);
+            } else {
+                this.playerSprite.anims.play('in-air-up', false);
+            }
+        }
+        //If on ground
+        else if(this.state.has(STATES.ON_GROUND)) {
+
+            if(this.state.has(STATES.MOVING)) {
+                this.playerSprite.anims.play('running', true);
+            } else {
+                this.playerSprite.anims.play('still', true);
+            }
+        }
+
+        // This is for sprite sheet that does not contain flipped images of the same animation
+        this.playerSprite.flipX = this.state.has(STATES.LEFT_FACING);
+
+        //TODO: this slows down/speeds up adnimation frames based on velocity, is very dependant on the graphical frames (the pics)
+        if (this.state.has(STATES.MOVING)) {
+            this.playerSprite.anims.setTimeScale(inputData.absVelocityX / 4);
+        } else {
+            this.playerSprite.anims.setTimeScale(1);
+        }
+    },
+
+    // Process user input (move, jump, shoot etc etc)
+    processInput: function(inputData) {
+
+        if (this.cursors.left.isDown) {
+           this.tryMove(inputData, 'left');
+        }
+        else if (this.cursors.right.isDown) {
+            this.tryMove(inputData, 'right');
+        }
+
+        if (this.cursors.up.isDown) {
+            this.tryJump();
+        }
+    },
+
+    /**
+     * Set current state of the player according to what the player is doing before entering this method.
+     *
+     * Set new player states depending on what is happened to the player. "Is he moving, is he dead, is he in the air..."
+     *
+     * @param gameWorld
+     */
+    processCurrentPlayerState(gameWorld, playerState) {
+
+        // Set "is on ground" states
+        this.checkOnGround(gameWorld);
+
+        // Check if player is moving in any direction
+        if (playerState.absVelocityX > WORLD_CONSTANTS.MINIMUM_VELOCITY || playerState.absVelocityY > WORLD_CONSTANTS.MINIMUM_VELOCITY) {
+            this.state.delete(STATES.STILL);
+            this.state.add(STATES.MOVING);
+
+            // Check if player is airborne and if he is falling or not
+            if(this.getVelocity().y > WORLD_CONSTANTS.MINIMUM_VELOCITY && this.state.has(STATES.IN_AIR)) {
+                this.state.add(STATES.FALLING);
+            } else {
+                this.state.delete(STATES.FALLING);
+            }
+        }
+        // Player is not moving
+        else {
+            this.state.delete(STATES.MOVING);
+            if(!this.state.has(STATES.IN_AIR)) {
+                this.state.add(STATES.STILL);
+            }
+        }
+    },
+
+    // Check if the player feet is touching something
+    checkOnGround: function (gameWorld) {
+        const onGround = gameWorld.children.list.find((obj) => {
+            if (obj.body && obj.body.ztype && obj.body.ztype.includes('dead-object') && obj.body.parts) {
+                return obj.body.parts.find((part) => {
+
+                    // Optimisation done here which will not work for moving objects
+                    if (!part.calcRect) {
+                        part.calcRect = new Rect(part.bounds.min.x, part.bounds.min.y,
+                            part.bounds.max.x - part.bounds.min.x,
+                            part.bounds.max.y - part.bounds.min.y);
+                    }
+                    return part.calcRect.intersectsBounds(this.debugFeetRectangle.bounds);
+                })
+            }
+            return false;
+        });
+
+        if (onGround) {
+            this.state.add(STATES.ON_GROUND);
+            this.state.delete(STATES.IN_AIR)
+        } else {
+            this.state.delete(STATES.ON_GROUND);
+            this.state.add(STATES.IN_AIR)
+        }
+    },
+
 
 };
 

@@ -67,7 +67,7 @@ const main = (htmlElement) =>
         });
 
         this.anims.create({
-            key: 'turn',
+            key: 'still',
             frames: [ { key: 'dude', frame: 4 } ],
             frameRate: 20
         });
@@ -125,7 +125,7 @@ const main = (htmlElement) =>
         {
             player.setVelocityX(0);
 
-            player.anims.play('turn');
+            player.anims.play('still');
             run = false;
         }
 

@@ -68,7 +68,7 @@ const main = (parentElementId) => {
         });
 
         this.anims.create({
-            key: 'turn',
+            key: 'still',
             frames: [ { key: 'dude', frame: 5 } ],
             frameRate: 20
         });
@@ -137,7 +137,7 @@ const main = (parentElementId) => {
 
         // player resting?
         else if(player.body.velocity.x < 0.5 && player.body.velocity.x > -0.5) {
-            player.anims.play('turn');
+            player.anims.play('still');
         }
 
 

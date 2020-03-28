@@ -20,10 +20,6 @@ const main = (parentElementId, scenes) => {
         scene: scenes
     };
 
-    function update () {
-
-    }
-
     return new Phaser.Game(config);
 };
 
