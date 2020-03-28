@@ -9,12 +9,12 @@ const main = (parentElementId, scenes) => {
         type: Phaser.AUTO,
         width: 1600,
         height: 800,
-        backgroundColor: '#2B644F',
+        backgroundColor: '#030303',
         parent: parentElementId,
         physics: {
             default: 'matter',
             matter: {
-                debug: true
+                debug: false
             }
         },
         scene: scenes
