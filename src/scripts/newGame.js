@@ -14,7 +14,7 @@ const main = (parentElementId, scenes) => {
         physics: {
             default: 'matter',
             matter: {
-                debug: false
+                debug: true
             }
         },
         scene: scenes

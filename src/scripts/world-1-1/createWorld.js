@@ -1,6 +1,9 @@
 import {Scene} from "phaser";
-import Player from "../player";
+import Player from "../player/player";
+import chooseCharacters from "../player/characters";
 import {random} from '../utils';
+
+const playerCharacter = chooseCharacters('adventure-guy');
 
 export default class Level1_1Scene extends Scene {
     constructor() {
@@ -22,9 +25,10 @@ export default class Level1_1Scene extends Scene {
 
         this.load.image('debug', './assets/sprites/debug.png');
 
+        // TODO: would be nice to let the player actually pre-load this...
         this.load.spritesheet('player',
-            './assets/sprites/adventure-player.png',
-            {frameWidth: 50, frameHeight: 37},null, 109
+            playerCharacter.spriteSheet,
+            {frameWidth: playerCharacter.width, frameHeight: playerCharacter.height},null, playerCharacter.totalFrames
         );
     }
 
@@ -34,56 +38,12 @@ export default class Level1_1Scene extends Scene {
 
         this.add.tileSprite(800, 700, 1600, 160, 'background');
 
-        const groundSprite = this.add.tileSprite(800, 796, 1600, 21, 'stone_ground');
+        this.createGround('stone_ground', this.game.canvas.width/2, 796, this.game.canvas.width, 21);
 
-        this.matter.add.gameObject(groundSprite,{
-            isStatic: true,
-            render: {
-                sprite: {
-                    yOffset: 0.25
-                }
-            }
-        }).setStatic(true);
-
-        groundSprite.body.ztype =  ['dead-object'];
-
-
-        /*
-        const groundRectangle = this.matter.bodies.rectangle(800, 780, 1600, 18, {
-            render: {
-                sprite: groundSprite
-
-            },
-            isStatic: true,
-
-        });*/
-
-       // groundRectangle.ztype = ['dead-object'];
-
-        //this.matter.world.add(groundRectangle);
-
-        //groundRectangle.ztype = ['dead-object'];
-
-
-
-
-     //   this.createGround(this.matter, 'grnd1',156/2, this.game.canvas.height - 11,156, 22).
-       // setExistingBody(groundRectangle);
-
-
-
-      //  this.createGround(this.matter, 'grnd2',156*1.5, this.game.canvas.height - 11,156, 22);
-       // this.createGround(this.matter, 'grnd1',156*2.5, this.game.canvas.height - 11,156, 22);
-       // this.createGround(this.matter, 'grnd2',156*3.5, this.game.canvas.height - 11,156, 22);
-
-
-    //    this.createGround(this.matter, (this.game.canvas.width / 4) - 100, this.game.canvas.height, (this.game.canvas.width /2),100);
-      //  this.createGround(this.matter, (this.game.canvas.width * 0.75) + 100, this.game.canvas.height, (this.game.canvas.width /2) - 100,100);
-
-      //  const objects = random(1, 20);
-      //  for(var i=0; i<objects; i++) {
-      //      this.createGround(this.matter, random(0,this.game.canvas.width),random(200,this.game.canvas.height-100), random(20,200), random(20,200));
-        //}
+        const objects = random(10, 20);
+       for(var i=0; i<objects; i++) {
+            this.createGround('stone_ground', random(0,this.game.canvas.width),random(200,this.game.canvas.height-100), 48 * random(1,10), 21);
+       }
 
         this.time.addEvent({ delay: 3250, callback: this.createBall.bind(this.matter), callbackScope: this, repeat: 4012 });
 
@@ -111,12 +71,20 @@ export default class Level1_1Scene extends Scene {
         });
     }
 
-    createGround(matter, image, x,y,w,h) {
-        const ground = matter.add.sprite(x, y, image).setStatic(true);
-        ground.displayHeight = h;
-        ground.displayWidth = w;
-        ground.tint = '0xeeee11';
-        ground.body.ztype = ['dead-object'];
+    createGround(image, x,y,w,h) {
+
+        const ground = this.add.tileSprite(x, y, w,h, image);
+
+        this.matter.add.gameObject(ground,{
+            isStatic: true,
+            render: {
+                sprite: {
+                    yOffset: 0.25
+                }
+            }
+        }).setStatic(true);
+
+        ground.body.ztype =  ['dead-object'];
 
         return ground;
     }

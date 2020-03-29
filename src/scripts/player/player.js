@@ -1,4 +1,7 @@
-import {random, Rect} from './utils'
+import {Rect} from '../utils'
+import chooseCharacters from "../player/characters";
+
+const playerCharacter = chooseCharacters('adventure-guy');
 
 const WORLD_CONSTANTS = {
     //If velocity goes below this value its considered to be ZERO
@@ -17,19 +20,6 @@ const STATES = {
 
 };
 
-const PlayerConfig = {
-    friction: 0.08,
-    frictionAir: 0.001,
-    mass: 40,
-    bounce: 0.015,
-    maxSpeed: 8,
-    jumpForce: 1.7,
-    accelerationForce: 0.067,
-    accelerationForceAir: 0.015,
-    debugLogStateEveryMs: 1000,
-    scale: 2,
-    minTimeBetweenJumpsMs: 400,
-};
 const Player = {
 
     type: ['player', 'character', 'collidable'],
@@ -43,27 +33,18 @@ const Player = {
     cursors: {},
     playerSprite: {}, // GameEngine sprite representation
     hitBox: {}, // GameEngine physics
+
+    // TODO: perhaps find a better way to prevent "jump spamming", works for now...
     lastJumpTimeStamp: 0,
-
-    // Callback that something hit the Player
-    onCollide(collider) {
-
-        // hit something edible
-        if (collider.ztype && collider.ztype.includes('edible')) {
-            console.log("Eating: ", collider);
-            if (collider.gameObject) {
-                collider.gameObject.destroy();
-                this.status.xp = this.status.xp + 1;
-            }
-        }
-    },
+    jumpButtonReleased: true,
 
     //Initialise animations and event listeners
     init(gameWorld) {
 
-        this.hitBox = gameWorld.matter.bodies.rectangle(0, 0, 18 * PlayerConfig.scale, 30 *  PlayerConfig.scale);
+        this.hitBox = gameWorld.matter.bodies.rectangle(0, 0, playerCharacter.hitBoxWidth * playerCharacter.scale, playerCharacter.hitBoxHeight *  playerCharacter.scale);
         this.hitBox.zetParent = this;
-        this.debugFeetRectangle = gameWorld.matter.bodies.rectangle(0, 15 *  PlayerConfig.scale, 10 *  PlayerConfig.scale, 2 *  PlayerConfig.scale, {
+        // This is the feet hitbox. It determines if the player is standing on something
+        this.debugFeetRectangle = gameWorld.matter.bodies.rectangle(0, (playerCharacter.hitBoxHeight / 2) *  playerCharacter.scale, (playerCharacter.hitBoxWidth - 2) *  playerCharacter.scale, 2 *  playerCharacter.scale, {
             isSensor: true,
         });
 
@@ -71,7 +52,7 @@ const Player = {
             parts: [this.hitBox, this.debugFeetRectangle]
         });
 
-        this.playerSprite = gameWorld.matter.add.sprite(0, 0, 'player').setScale(PlayerConfig.scale);
+        this.playerSprite = gameWorld.matter.add.sprite(0, 0, 'player').setScale(playerCharacter.scale);
 
         // Reference to the game world to be able to invoke callback methods on this Player Object
         this.playerSprite.body.zetParent = this;
@@ -79,48 +60,19 @@ const Player = {
         this.playerSprite.setExistingBody(playerParts);
 
         this.playerSprite.setOrigin(0.5, 0.6);
-        this.playerSprite.setFriction(PlayerConfig.friction);
-        this.playerSprite.setFrictionAir(PlayerConfig.frictionAir);
+        this.playerSprite.setFriction(playerCharacter.friction);
+        this.playerSprite.setFrictionAir(playerCharacter.frictionAir);
         this.playerSprite.setFixedRotation();
-        this.playerSprite.setMass(PlayerConfig.mass);
-        this.playerSprite.setBounce(PlayerConfig.bounce);
+        this.playerSprite.setMass(playerCharacter.mass);
+        this.playerSprite.setBounce(playerCharacter.bounce);
         this.playerSprite.setPosition(200, 110);
 
         this.cursors = gameWorld.input.keyboard.createCursorKeys();
 
-        gameWorld.anims.create({
-            key: 'still',
-            frames: gameWorld.anims.generateFrameNumbers('player', {start: 0, end: 1}),
-            yoyo: true,
-            frameRate: 1,
-            repeatDelay: 3000,
-            delay:1000,
-            repeat: -1
-        });
-
-        gameWorld.anims.create({
-            key: 'running',
-            frames: gameWorld.anims.generateFrameNumbers('player', {start: 8, end: 13}),
-            frameRate: 10,
-            repeat: -1
-        });
-
-        gameWorld.anims.create({
-            key: 'in-air-up',
-            frames: gameWorld.anims.generateFrameNumbers('player', {start: 16, end: 18}),
-            repeat: -1,
-        });
-
-        gameWorld.anims.create({
-            key: 'in-air-falling',
-            frames: gameWorld.anims.generateFrameNumbers('player', {start: 22, end: 23}),
-            repeat: -1,
-        });
-
-
-        // if(PlayerConfig.debugLogStateEveryMs) {
-        //    setInterval(() =>{gameWorld.emit('playerStatsUpdate');console.log(this.getPlayerStats())}, PlayerConfig.debugLogStateEveryMs);
-        //}
+        playerCharacter.createAnimations(gameWorld).forEach((a) => {
+                gameWorld.anims.create(a);
+            }
+        );
     },
 
     /**
@@ -142,7 +94,18 @@ const Player = {
         this.setPlayerAnimations(gameWorld, {absVelocityX});
     },
 
+    // Callback that something hit the Player
+    onCollide(collider) {
 
+        // hit something edible
+        if (collider.ztype && collider.ztype.includes('edible')) {
+            // console.log("Eating: ", collider);
+            if (collider.gameObject) {
+                collider.gameObject.destroy();
+                this.status.xp = this.status.xp + 1;
+            }
+        }
+    },
 
     getVelocity() {
         if (this.playerSprite && this.playerSprite.body && this.playerSprite.body.velocity) {
@@ -159,19 +122,21 @@ const Player = {
     },
 
     tryJump: function () {
-        if(this.state.has(STATES.ON_GROUND) && this.lastJumpTimeStamp < (window.performance.now() - PlayerConfig.minTimeBetweenJumpsMs)) {
+        if(this.state.has(STATES.ON_GROUND) &&
+            this.lastJumpTimeStamp < (window.performance.now() - playerCharacter.minTimeBetweenJumpsMs) && this.jumpButtonReleased) {
             this.lastJumpTimeStamp = window.performance.now();
-            this.playerSprite.thrustLeft(PlayerConfig.jumpForce);
+            this.jumpButtonReleased = false;
+            this.playerSprite.thrustLeft(playerCharacter.jumpForce);
         }
     },
 
     tryMove: function(inputData, direction) {
         const airborne = this.state.has(STATES.IN_AIR);
 
-        if (inputData.absVelocityX < PlayerConfig.maxSpeed) {
+        if (inputData.absVelocityX < playerCharacter.maxSpeed) {
                 direction === 'right' ?
-                    this.playerSprite.thrust(airborne ? PlayerConfig.accelerationForceAir : PlayerConfig.accelerationForce) :
-                    this.playerSprite.thrustBack(airborne ? PlayerConfig.accelerationForceAir : PlayerConfig.accelerationForce);
+                    this.playerSprite.thrust(airborne ? playerCharacter.accelerationForceAir : playerCharacter.accelerationForce) :
+                    this.playerSprite.thrustBack(airborne ? playerCharacter.accelerationForceAir : playerCharacter.accelerationForce);
             this.state.delete(direction === 'right' ? STATES.LEFT_FACING : STATES.RIGHT_FACING);
             this.state.add(direction === 'right' ? STATES.RIGHT_FACING : STATES.LEFT_FACING);
             this.state.add(STATES.MOVING);
@@ -228,6 +193,10 @@ const Player = {
         if (this.cursors.up.isDown) {
             this.tryJump();
         }
+
+        if (this.cursors.up.isUp) {
+            this.jumpButtonReleased = true;
+        }
     },
 
     /**
@@ -236,6 +205,7 @@ const Player = {
      * Set new player states depending on what is happened to the player. "Is he moving, is he dead, is he in the air..."
      *
      * @param gameWorld
+     * @param playerState
      */
     processCurrentPlayerState(gameWorld, playerState) {
 
