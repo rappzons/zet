@@ -93,8 +93,7 @@ export default class Level1_1Scene extends Scene {
 
         var ball = this.add.image(random(100,800), -100, 'virus_ball', null, { isStatic: true });
         ball.setCircle(10);
-        ball.body.ztype = ['dead-object','edible'];
-        //ball.body.id = random(0,10000);
+        ball.body.ztype = ['dead-object','meele-vulnerable'];
     }
     update() {
        this.player.onGameUpdate(this);

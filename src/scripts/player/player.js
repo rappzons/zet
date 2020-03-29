@@ -17,6 +17,7 @@ const STATES = {
     LEFT_FACING: 'left-facing',
     RIGHT_FACING: 'right-facing',
     FALLING: 'falling',
+    MELEE_ATTACKING: 'melee-attacking',
 
 };
 
@@ -34,6 +35,8 @@ const Player = {
     playerSprite: {}, // GameEngine sprite representation
     hitBox: {}, // GameEngine physics
 
+
+    meleeButtonReleased: true,
     // TODO: perhaps find a better way to prevent "jump spamming", works for now...
     lastJumpTimeStamp: 0,
     jumpButtonReleased: true,
@@ -41,15 +44,23 @@ const Player = {
     //Initialise animations and event listeners
     init(gameWorld) {
 
-        this.hitBox = gameWorld.matter.bodies.rectangle(0, 0, playerCharacter.hitBoxWidth * playerCharacter.scale, playerCharacter.hitBoxHeight *  playerCharacter.scale);
+        this.hitBox = gameWorld.matter.bodies.rectangle(0, 0, playerCharacter.hitBoxWidth * playerCharacter.scale, playerCharacter.hitBoxHeight * playerCharacter.scale);
         this.hitBox.zetParent = this;
         // This is the feet hitbox. It determines if the player is standing on something
-        this.debugFeetRectangle = gameWorld.matter.bodies.rectangle(0, (playerCharacter.hitBoxHeight / 2) *  playerCharacter.scale, (playerCharacter.hitBoxWidth - 2) *  playerCharacter.scale, 2 *  playerCharacter.scale, {
+        this.debugFeetRectangle = gameWorld.matter.bodies.rectangle(0, (playerCharacter.hitBoxHeight / 2) * playerCharacter.scale, (playerCharacter.hitBoxWidth - 2) * playerCharacter.scale, 2 * playerCharacter.scale, {
+            isSensor: true,
+        });
+
+        this.meleeAttackHitBoxRight = gameWorld.matter.bodies.rectangle(30, 0, (playerCharacter.meleeAttack.width) * playerCharacter.scale, playerCharacter.meleeAttack.height * playerCharacter.scale, {
+            isSensor: true,
+        });
+
+        this.meleeAttackHitBoxLeft = gameWorld.matter.bodies.rectangle(-30, 0, (playerCharacter.meleeAttack.width) * playerCharacter.scale, playerCharacter.meleeAttack.height * playerCharacter.scale, {
             isSensor: true,
         });
 
         const playerParts = gameWorld.matter.body.create({
-            parts: [this.hitBox, this.debugFeetRectangle]
+            parts: [this.hitBox, this.debugFeetRectangle, this.meleeAttackHitBoxLeft, this.meleeAttackHitBoxRight]
         });
 
         this.playerSprite = gameWorld.matter.add.sprite(0, 0, 'player').setScale(playerCharacter.scale);
@@ -66,6 +77,14 @@ const Player = {
         this.playerSprite.setMass(playerCharacter.mass);
         this.playerSprite.setBounce(playerCharacter.bounce);
         this.playerSprite.setPosition(200, 110);
+
+        this.playerSprite.on('animationcomplete', (animation, frame) => {
+            //console.log("animationcomplete", window.performance.now(), frame);
+            if (animation.key === 'melee-attack') {
+
+                this.state.delete(STATES.MELEE_ATTACKING);
+            }
+        }, this);
 
         this.cursors = gameWorld.input.keyboard.createCursorKeys();
 
@@ -122,47 +141,56 @@ const Player = {
     },
 
     tryJump: function () {
-        if(this.state.has(STATES.ON_GROUND) &&
+        if (this.state.has(STATES.ON_GROUND) &&
             this.lastJumpTimeStamp < (window.performance.now() - playerCharacter.minTimeBetweenJumpsMs) && this.jumpButtonReleased) {
             this.lastJumpTimeStamp = window.performance.now();
             this.jumpButtonReleased = false;
             this.playerSprite.thrustLeft(playerCharacter.jumpForce);
         }
     },
-
-    tryMove: function(inputData, direction) {
+    tryMeleeAttack: function () {
+        if (this.meleeButtonReleased) {
+            this.state.add(STATES.MELEE_ATTACKING);
+            this.meleeButtonReleased = false;
+        }
+    },
+    tryMove: function (inputData, direction) {
         const airborne = this.state.has(STATES.IN_AIR);
 
         if (inputData.absVelocityX < playerCharacter.maxSpeed) {
-                direction === 'right' ?
-                    this.playerSprite.thrust(airborne ? playerCharacter.accelerationForceAir : playerCharacter.accelerationForce) :
-                    this.playerSprite.thrustBack(airborne ? playerCharacter.accelerationForceAir : playerCharacter.accelerationForce);
+            direction === 'right' ?
+                this.playerSprite.thrust(airborne ? playerCharacter.accelerationForceAir : playerCharacter.accelerationForce) :
+                this.playerSprite.thrustBack(airborne ? playerCharacter.accelerationForceAir : playerCharacter.accelerationForce);
             this.state.delete(direction === 'right' ? STATES.LEFT_FACING : STATES.RIGHT_FACING);
             this.state.add(direction === 'right' ? STATES.RIGHT_FACING : STATES.LEFT_FACING);
             this.state.add(STATES.MOVING);
         }
 
 
-
     },
     /**
      * Set animation depending on player states
      */
-    setPlayerAnimations: function(gameWorld, inputData) {
+    setPlayerAnimations: function (gameWorld, inputData) {
 
+        // If melee attacking
+        if (this.state.has(STATES.MELEE_ATTACKING)) {
+            // console.log("Attack start", window.performance.now());
+            this.playerSprite.anims.play('melee-attack', true);
+        }
         //If airborne
-        if(this.state.has(STATES.IN_AIR)) {
+        else if (this.state.has(STATES.IN_AIR)) {
 
-            if(this.state.has(STATES.FALLING)) {
+            if (this.state.has(STATES.FALLING)) {
                 this.playerSprite.anims.play('in-air-falling', true);
             } else {
                 this.playerSprite.anims.play('in-air-up', false);
             }
         }
         //If on ground
-        else if(this.state.has(STATES.ON_GROUND)) {
+        else if (this.state.has(STATES.ON_GROUND)) {
 
-            if(this.state.has(STATES.MOVING)) {
+            if (this.state.has(STATES.MOVING)) {
                 this.playerSprite.anims.play('running', true);
             } else {
                 this.playerSprite.anims.play('still', true);
@@ -172,8 +200,8 @@ const Player = {
         // This is for sprite sheet that does not contain flipped images of the same animation
         this.playerSprite.flipX = this.state.has(STATES.LEFT_FACING);
 
-        //TODO: this slows down/speeds up adnimation frames based on velocity, is very dependant on the graphical frames (the pics)
-        if (this.state.has(STATES.MOVING)) {
+        //TODO: this slows down/speeds up animation frames based on velocity, is very dependant on the graphical frames (the pics)
+        if (this.state.has(STATES.MOVING) && !this.state.has(STATES.MELEE_ATTACKING)) {
             this.playerSprite.anims.setTimeScale(inputData.absVelocityX / 4);
         } else {
             this.playerSprite.anims.setTimeScale(1);
@@ -181,12 +209,13 @@ const Player = {
     },
 
     // Process user input (move, jump, shoot etc etc)
-    processInput: function(inputData) {
+    processInput: function (inputData) {
 
-        if (this.cursors.left.isDown) {
-           this.tryMove(inputData, 'left');
-        }
-        else if (this.cursors.right.isDown) {
+        if (this.cursors.space.isDown) {
+            this.tryMeleeAttack();
+        } else if (this.cursors.left.isDown) {
+            this.tryMove(inputData, 'left');
+        } else if (this.cursors.right.isDown) {
             this.tryMove(inputData, 'right');
         }
 
@@ -194,9 +223,8 @@ const Player = {
             this.tryJump();
         }
 
-        if (this.cursors.up.isUp) {
-            this.jumpButtonReleased = true;
-        }
+        this.jumpButtonReleased = this.cursors.up.isUp;
+        this.meleeButtonReleased = this.cursors.space.isUp;
     },
 
     /**
@@ -210,7 +238,7 @@ const Player = {
     processCurrentPlayerState(gameWorld, playerState) {
 
         // Set "is on ground" states
-        this.checkOnGround(gameWorld);
+        this.checkPlayerInteractions(gameWorld);
 
         // Check if player is moving in any direction
         if (playerState.absVelocityX > WORLD_CONSTANTS.MINIMUM_VELOCITY || playerState.absVelocityY > WORLD_CONSTANTS.MINIMUM_VELOCITY) {
@@ -218,7 +246,7 @@ const Player = {
             this.state.add(STATES.MOVING);
 
             // Check if player is airborne and if he is falling or not
-            if(this.getVelocity().y > WORLD_CONSTANTS.MINIMUM_VELOCITY && this.state.has(STATES.IN_AIR)) {
+            if (this.getVelocity().y > WORLD_CONSTANTS.MINIMUM_VELOCITY && this.state.has(STATES.IN_AIR)) {
                 this.state.add(STATES.FALLING);
             } else {
                 this.state.delete(STATES.FALLING);
@@ -227,37 +255,79 @@ const Player = {
         // Player is not moving
         else {
             this.state.delete(STATES.MOVING);
-            if(!this.state.has(STATES.IN_AIR)) {
+            if (!this.state.has(STATES.IN_AIR)) {
                 this.state.add(STATES.STILL);
             }
         }
     },
 
-    // Check if the player feet is touching something
-    checkOnGround: function (gameWorld) {
-        const onGround = gameWorld.children.list.find((obj) => {
-            if (obj.body && obj.body.ztype && obj.body.ztype.includes('dead-object') && obj.body.parts) {
-                return obj.body.parts.find((part) => {
+    /**
+     * Check player interactions such as:
+     *  - If the player feet is touching something
+     *  - If any player action is affecting any world object, like a sword hitting an enemy
+     */
+    checkPlayerInteractions: function (gameWorld) {
+        const interActionStatus = {
+            onGround: false,
+        };
 
-                    // Optimisation done here which will not work for moving objects
-                    if (!part.calcRect) {
-                        part.calcRect = new Rect(part.bounds.min.x, part.bounds.min.y,
+        gameWorld.children.list.forEach((obj) => {
+
+            if (obj.body && obj.body.ztype && obj.body.parts) {
+
+                // Check if feet is touching ground
+
+                obj.body.parts.forEach((part) => {
+
+                    part.calcRect = new Rect(part.bounds.min.x, part.bounds.min.y,
                             part.bounds.max.x - part.bounds.min.x,
                             part.bounds.max.y - part.bounds.min.y);
+
+                    // Check if feet is touching ground
+                    if (obj.body.ztype.includes('dead-object') && part.calcRect.intersectsBounds(this.debugFeetRectangle.bounds)) {
+                        interActionStatus.onGround = true;
                     }
-                    return part.calcRect.intersectsBounds(this.debugFeetRectangle.bounds);
+
+                    // check if player has whacked anything vulnerable
+                    if (this.state.has(STATES.MELEE_ATTACKING) && obj.body.ztype.includes('meele-vulnerable')) {
+
+                        const hit = this.state.has(STATES.LEFT_FACING) ? part.calcRect.intersectsBounds(this.meleeAttackHitBoxLeft.bounds) : part.calcRect.intersectsBounds(this.meleeAttackHitBoxRight.bounds);
+
+                        if(hit) {
+                            //console.log("Player whacked: ", part, obj);
+                            this.status.xp = this.status.xp + 1;
+                            // obj.destroy();
+                            // TODO: callback to the object hit and have it react itself instead of doing it here
+
+                            // For now just give the object an angle and some force to make it fly away.
+                            // I think this causes multiple hits but that's good for now, the force will be less if the object is further away (won't be inside the hitbox for a very long time)
+                            
+                            if(this.state.has(STATES.LEFT_FACING)) {
+                                obj.angle = 225;
+                                obj.thrust(0.005);
+                            }
+                            else {
+                                obj.angle = 135;
+                                obj.thrustBack(0.005)
+                            }
+                        }
+
+                    }
+
+
                 })
             }
-            return false;
         });
 
-        if (onGround) {
+        if (interActionStatus.onGround) {
             this.state.add(STATES.ON_GROUND);
             this.state.delete(STATES.IN_AIR)
         } else {
             this.state.delete(STATES.ON_GROUND);
             this.state.add(STATES.IN_AIR)
         }
+
+        return interActionStatus;
     },
 
 

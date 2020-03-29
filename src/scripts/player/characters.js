@@ -16,6 +16,14 @@ const AdventureGuy = {
     scale: 2,
     minTimeBetweenJumpsMs: 700,
 
+    // TODO: put all different attacks into an array of generic attack-objects. Should perhaps also put the animation here?
+    meleeAttack: {
+        width: 18,
+        height: 20,
+        damage: 100,
+    },
+
+
     createAnimations: function (gameWorld) {
 
         const animations =
@@ -44,6 +52,12 @@ const AdventureGuy = {
                     key: 'in-air-falling',
                     frames: gameWorld.anims.generateFrameNumbers('player', {start: 22, end: 23}),
                     repeat: -1,
+                },
+                {
+                    key: 'melee-attack',
+                    frames: gameWorld.anims.generateFrameNumbers('player', {start: 49, end: 52}),
+                    frameRate: 14,
+                    repeat: 0,
                 }
             ];
 
