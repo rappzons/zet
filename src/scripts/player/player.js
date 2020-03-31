@@ -298,7 +298,7 @@ const Player = {
                             this.status.xp = this.status.xp + 1;
 
                             const damageData = {
-                                thrustForce: 0.005,
+                                thrustForce: 0.002,
                                 damage: 10,
                                 types: ['slash','melee']
                             };
