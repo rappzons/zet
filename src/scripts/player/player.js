@@ -117,7 +117,7 @@ const Player = {
     onCollide(collider) {
 
         // hit something edible
-        if (collider.ztype && collider.ztype.includes('edible')) {
+        if (collider.zData && collider.zData.zType.includes('edible')) {
             // console.log("Eating: ", collider);
             if (collider.gameObject) {
                 collider.gameObject.destroy();
@@ -273,7 +273,7 @@ const Player = {
 
         gameWorld.children.list.forEach((obj) => {
 
-            if (obj.body && obj.body.ztype && obj.body.parts) {
+            if (obj.body && obj.body.zData && obj.body.parts) {
 
                 // Check if feet is touching ground
 
@@ -284,32 +284,36 @@ const Player = {
                             part.bounds.max.y - part.bounds.min.y);
 
                     // Check if feet is touching ground
-                    if (obj.body.ztype.includes('dead-object') && part.calcRect.intersectsBounds(this.debugFeetRectangle.bounds)) {
+                    if (obj.body.zData.zType.includes('dead-object') && part.calcRect.intersectsBounds(this.debugFeetRectangle.bounds)) {
                         interActionStatus.onGround = true;
                     }
 
                     // check if player has whacked anything vulnerable
-                    if (this.state.has(STATES.MELEE_ATTACKING) && obj.body.ztype.includes('meele-vulnerable')) {
+                    if (this.state.has(STATES.MELEE_ATTACKING) && obj.body.zData.zType.includes('meele-vulnerable')) {
 
                         const hit = this.state.has(STATES.LEFT_FACING) ? part.calcRect.intersectsBounds(this.meleeAttackHitBoxLeft.bounds) : part.calcRect.intersectsBounds(this.meleeAttackHitBoxRight.bounds);
 
                         if(hit) {
                             //console.log("Player whacked: ", part, obj);
                             this.status.xp = this.status.xp + 1;
-                            // obj.destroy();
-                            // TODO: callback to the object hit and have it react itself instead of doing it here
 
-                            // For now just give the object an angle and some force to make it fly away.
-                            // I think this causes multiple hits but that's good for now, the force will be less if the object is further away (won't be inside the hitbox for a very long time)
-                            
+                            const damageData = {
+                                thrustForce: 0.005,
+                                damage: 10,
+                                types: ['slash','melee']
+                            };
                             if(this.state.has(STATES.LEFT_FACING)) {
-                                obj.angle = 225;
-                                obj.thrust(0.005);
+                                damageData.angle = 225;
                             }
                             else {
-                                obj.angle = 135;
-                                obj.thrustBack(0.005)
+                                damageData.angle = 135;
                             }
+
+                            // Tell the victim that it has been damaged
+                            if(obj.body.zData.onDamage){
+                                obj.body.zData.onDamage(damageData);
+                            }
+
                         }
 
                     }

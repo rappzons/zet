@@ -2,6 +2,7 @@ import {Scene} from "phaser";
 import Player from "../player/player";
 import chooseCharacters from "../player/characters";
 import {random} from '../utils';
+import ObjectFactory from '../objectFactory';
 
 const playerCharacter = chooseCharacters('adventure-guy');
 
@@ -12,6 +13,8 @@ export default class Level1_1Scene extends Scene {
             active: true
         });
 
+
+
     }
 
     preload() {
@@ -21,7 +24,10 @@ export default class Level1_1Scene extends Scene {
         this.load.image('stone_ground', './assets/world/grounds/stone_ground.png');
         this.load.image('background', './assets/world/grounds/background_1.png');
 
-        this.load.image('virus_ball', './assets/sprites/virus_ball.png');
+
+        this.load.spritesheet('virus_ball',
+            './assets/sprites/virus_ball_multi.png',
+            {frameWidth: 32, frameHeight: 32});
 
         this.load.image('debug', './assets/sprites/debug.png');
 
@@ -34,6 +40,8 @@ export default class Level1_1Scene extends Scene {
 
     create() {
 
+        this.objectFactory = ObjectFactory(this);
+
         this.matter.world.setBounds(0,-500,1600,1300);
 
         this.add.tileSprite(800, 700, 1600, 160, 'background');
@@ -45,7 +53,7 @@ export default class Level1_1Scene extends Scene {
             this.createGround('stone_ground', random(0,this.game.canvas.width),random(200,this.game.canvas.height-100), 48 * random(1,10), 21);
        }
 
-        this.time.addEvent({ delay: 3250, callback: this.createBall.bind(this.matter), callbackScope: this, repeat: 4012 });
+        this.time.addEvent({ delay: 3250, callback: this.createBall.bind(this), callbackScope: this, repeat: 4012 });
 
 
         console.log("Created World 1-1, adding player");
@@ -84,16 +92,15 @@ export default class Level1_1Scene extends Scene {
             }
         }).setStatic(true);
 
-        ground.body.ztype =  ['dead-object'];
+        ground.body.zData = {
+            zType: ['dead-object'],
+        };
 
         return ground;
     }
 
     createBall() {
-
-        var ball = this.add.image(random(100,800), -100, 'virus_ball', null, { isStatic: true });
-        ball.setCircle(10);
-        ball.body.ztype = ['dead-object','meele-vulnerable'];
+        return this.objectFactory.createInteractiveBall(random(100,800),-100, 10,'virus_ball', 100);
     }
     update() {
        this.player.onGameUpdate(this);
