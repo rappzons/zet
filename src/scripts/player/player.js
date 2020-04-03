@@ -289,7 +289,7 @@ const Player = {
                     }
 
                     // check if player has whacked anything vulnerable
-                    if (this.state.has(STATES.MELEE_ATTACKING) && obj.body.zData.zType.includes('meele-vulnerable')) {
+                    if (this.state.has(STATES.MELEE_ATTACKING) && obj.body.zData.zType.includes('melee-vulnerable')) {
 
                         const hit = this.state.has(STATES.LEFT_FACING) ? part.calcRect.intersectsBounds(this.meleeAttackHitBoxLeft.bounds) : part.calcRect.intersectsBounds(this.meleeAttackHitBoxRight.bounds);
 
