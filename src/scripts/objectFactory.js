@@ -71,6 +71,8 @@ export default function ObjectFactory(gameEngine) {
                     // Handle onDamage
                     onDamage: (damageData) => {
 
+                        console.log("Ball got damage. ", damageData, ball.body.zData.zHealth);
+
                         if (ball.body.zData.zHealth < 0) {
                             // Trigger death animation and the listener above will call destroy when finished
                             ball.anims.play('virus-ball-destroy', true);
@@ -79,6 +81,8 @@ export default function ObjectFactory(gameEngine) {
                         }
 
                         ball.body.zData.zHealth = ball.body.zData.zHealth - damageData.damage;
+
+
 
                         // Got damaged by a thrust force, apply it
                         if (damageData.angle && damageData.thrustForce) {
@@ -102,10 +106,8 @@ export default function ObjectFactory(gameEngine) {
 
                 demon.anims.play('blue-demon-idle', true);
 
-                demon.on('animationcomplete', (animation, frame) => {
-                    if (animation.key === 'demon-destroy') {
+                demon.on('animationcomplete-demon-destroy', (animation, frame) => {
                         demon.destroy();
-                    }
                 }, this);
 
 

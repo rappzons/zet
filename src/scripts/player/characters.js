@@ -20,7 +20,11 @@ const AdventureGuy = {
     meleeAttack: {
         width: 18,
         height: 20,
-        damage: 100,
+        damage: 35,
+        thrustForce: 0.015,
+        // Which animation key should trigger the damage
+        animationKey: 50,
+        types: ['slash', 'melee'],
     },
 
 
@@ -55,7 +59,7 @@ const AdventureGuy = {
                 },
                 {
                     key: 'melee-attack',
-                    frames: gameWorld.anims.generateFrameNumbers('player', {start: 49, end: 52}),
+                    frames: gameWorld.anims.generateFrameNumbers('player', {start: 48, end: 52}),
                     frameRate: 14,
                     repeat: 0,
                 }

@@ -18,7 +18,6 @@ const STATES = {
     RIGHT_FACING: 'right-facing',
     FALLING: 'falling',
     MELEE_ATTACKING: 'melee-attacking',
-
 };
 
 const Player = {
@@ -44,6 +43,7 @@ const Player = {
     //Initialise animations and event listeners
     init(gameWorld) {
 
+        this.gameWorld = gameWorld;
         this.hitBox = gameWorld.matter.bodies.rectangle(0, 0, playerCharacter.hitBoxWidth * playerCharacter.scale, playerCharacter.hitBoxHeight * playerCharacter.scale);
         this.hitBox.zetParent = this;
         // This is the feet hitbox. It determines if the player is standing on something
@@ -78,10 +78,29 @@ const Player = {
         this.playerSprite.setBounce(playerCharacter.bounce);
         this.playerSprite.setPosition(200, 110);
 
+        // See for event keys: https://photonstorm.github.io/phaser3-docs/Phaser.Animations.Events.html
+        this.playerSprite.on('animationupdate-melee-attack', (animation, frame, gameObject) => {
+            // console.log("animationcomplete-melee-attack", window.performance.now(), frame, gameObject);
+
+            // only check interaction when the correct animation frame is in play TOOD: can this be skipped in case of bad performance? perhaps don't rely on frame checking here...but if not the attack will continue to hit as long as the animation is playing
+            if (frame.textureFrame === playerCharacter.meleeAttack.animationKey) {
+                console.log("animationcomplete-melee-attack DONE");
+                this.checkAttackInteraction(this.gameWorld);
+            }
+
+            // Keep the state until finished
+            if (frame.isLast) {
+                //console.log("animationcomplete-melee-attack LAST");
+                this.state.delete(STATES.MELEE_ATTACKING);
+            }
+
+        }, this);
+
         this.playerSprite.on('animationcomplete', (animation, frame) => {
             //console.log("animationcomplete", window.performance.now(), frame);
             if (animation.key === 'melee-attack') {
 
+                this.checkAttackInteraction(this.gameWorld);
                 this.state.delete(STATES.MELEE_ATTACKING);
             }
         }, this);
@@ -280,42 +299,12 @@ const Player = {
                 obj.body.parts.forEach((part) => {
 
                     part.calcRect = new Rect(part.bounds.min.x, part.bounds.min.y,
-                            part.bounds.max.x - part.bounds.min.x,
-                            part.bounds.max.y - part.bounds.min.y);
+                        part.bounds.max.x - part.bounds.min.x,
+                        part.bounds.max.y - part.bounds.min.y);
 
                     // Check if feet is touching ground
                     if (obj.body.zData.zType.includes('dead-object') && part.calcRect.intersectsBounds(this.debugFeetRectangle.bounds)) {
                         interActionStatus.onGround = true;
-                    }
-
-                    // check if player has whacked anything vulnerable
-                    if (this.state.has(STATES.MELEE_ATTACKING) && obj.body.zData.zType.includes('melee-vulnerable')) {
-
-                        const hit = this.state.has(STATES.LEFT_FACING) ? part.calcRect.intersectsBounds(this.meleeAttackHitBoxLeft.bounds) : part.calcRect.intersectsBounds(this.meleeAttackHitBoxRight.bounds);
-
-                        if(hit) {
-                            //console.log("Player whacked: ", part, obj);
-                            this.status.xp = this.status.xp + 1;
-
-                            const damageData = {
-                                thrustForce: 0.002,
-                                damage: 10,
-                                types: ['slash','melee']
-                            };
-                            if(this.state.has(STATES.LEFT_FACING)) {
-                                damageData.angle = 225;
-                            }
-                            else {
-                                damageData.angle = 135;
-                            }
-
-                            // Tell the victim that it has been damaged
-                            if(obj.body.zData.onDamage){
-                                obj.body.zData.onDamage(damageData);
-                            }
-
-                        }
-
                     }
 
 
@@ -333,8 +322,47 @@ const Player = {
 
         return interActionStatus;
     },
+    checkAttackInteraction: function (gameWorld) {
 
+        if (!this.state.has(STATES.MELEE_ATTACKING)) {
+            return;
+        }
 
+        gameWorld.children.list.forEach((obj) => {
+
+                // check if player has whacked anything vulnerable.
+                if (obj.body && obj.body.zData && obj.body.zData.zType.includes('melee-vulnerable') && obj.body.parts) {
+
+                    obj.body.parts.forEach((part) => {
+                            const hit = this.state.has(STATES.LEFT_FACING) ? part.calcRect.intersectsBounds(this.meleeAttackHitBoxLeft.bounds) : part.calcRect.intersectsBounds(this.meleeAttackHitBoxRight.bounds);
+
+                            if (hit) {
+                                console.log("Player whacked: ", part, obj);
+                                this.status.xp = this.status.xp + 1;
+
+                                const damageData = {
+                                    thrustForce: playerCharacter.meleeAttack.thrustForce,
+                                    damage: playerCharacter.meleeAttack.damage,
+                                    types: playerCharacter.meleeAttack.damage.types
+                                };
+                                if (this.state.has(STATES.LEFT_FACING)) {
+                                    damageData.angle = 225;
+                                } else {
+                                    damageData.angle = 135;
+                                }
+
+                                // Tell the victim that it has been damaged
+                                if (obj.body.zData.onDamage) {
+                                    obj.body.zData.onDamage(damageData);
+                                }
+
+                            }
+                        }
+                    );
+                }
+            }
+        );
+    },
 };
 
 export default Player;
