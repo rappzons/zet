@@ -15,7 +15,7 @@ export default class StatsScene extends Scene {
         this.statsInfo = this.add.text(10,20,"Score: 0, Lives: 999", {font: '16px Courier', fill: '#00ff33'}).setDepth(1000);
     }
 
-    update() {
+    update() {
         const worldScene = this.scene.get('level-1-1');
         if(worldScene && worldScene.player && worldScene.player.getPlayerStats ) {
 

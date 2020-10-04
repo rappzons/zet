@@ -14,6 +14,10 @@ export default function ObjectFactory(gameEngine) {
                     './assets/sprites/enemies/blue-demon/demon-idle.png',
                     {frameWidth: 160, frameHeight: 144});
 
+                gameEngine.load.spritesheet('blue_slime',
+                    './assets/sprites/enemies/blue-slime.png',
+                    {frameWidth: 32, frameHeight: 25});
+
             },
 
             load: () => {
@@ -37,6 +41,42 @@ export default function ObjectFactory(gameEngine) {
                             frameRate: 15,
                             repeat: 0,
                             delay: 100,
+                        },
+                        {
+                            key: 'blue-slime-idle',
+                            frames: gameEngine.anims.generateFrameNumbers('blue_slime', {start: 0, end: 3}),
+                            repeat: -1,
+                            frameRate: 7
+                        },
+                        {
+                            key: 'blue-slime-moving',
+                            frames: gameEngine.anims.generateFrameNumbers('blue_slime', {start: 4, end: 7}),
+                            repeat: -1,
+                            frameRate: 7
+                        },
+                        {
+                            key: 'blue-slime-attacking',
+                            frames: gameEngine.anims.generateFrameNumbers('blue_slime', {start: 8, end: 11}),
+                            repeat: 0,
+                            frameRate: 7
+                        },
+                        {
+                            key: 'blue-slime-hurt',
+                            frames: gameEngine.anims.generateFrameNumbers('blue_slime', {start: 12, end: 15}),
+                            repeat: 0,
+                            frameRate: 7
+                        },
+                        {
+                            key: 'blue-slime-destroy',
+                            frames: gameEngine.anims.generateFrameNumbers('blue_slime', {start: 16, end: 19}),
+                            repeat: 0,
+                            frameRate: 7
+                        },
+                        {
+                            key: 'blue-slime-dead',
+                            frames: gameEngine.anims.generateFrameNumbers('blue_slime', {start: 20, end: 20}),
+                            repeat: -1,
+                            frameRate: 7
                         },
                         {
                             key: 'blue-demon-idle',
@@ -98,6 +138,57 @@ export default function ObjectFactory(gameEngine) {
                 };
 
                 return ball;
+            },
+
+            spawnBlueSlime: (x, y, health) => {
+
+                const blue_slime = gameEngine.matter.add.sprite(x, y, 'blue_slime', null, {isStatic: true});
+
+                console.log("Spawning blue slime at ",x, y);
+
+                blue_slime.setRectangle(25,15);
+                blue_slime.anims.play('blue-slime-idle', true);
+
+                blue_slime.on('animationcomplete', (animation, frame) => {
+                    if (animation.key === 'blue-slime-destroy') {
+                        blue_slime.destroy();
+                    }
+                }, this);
+
+
+                blue_slime.body.zData = {
+                    zType: ['dead-object', 'melee-vulnerable'],
+                    zHealth: health,
+                    // Handle onDamage
+                    onDamage: (damageData) => {
+
+                        console.log("Blue Slime got damage. ", damageData, blue_slime.body.zData.zHealth);
+
+                        if (blue_slime.body.zData.zHealth < 0) {
+                            // Trigger death animation and the listener above will call destroy when finished
+                            blue_slime.anims.play('blue-slime-destroy', true);
+                        } else {
+                            blue_slime.anims.play('blue-slime-hurt', true);
+                        }
+
+                        blue_slime.body.zData.zHealth = blue_slime.body.zData.zHealth - damageData.damage;
+
+
+
+                        // Got damaged by a thrust force, apply it
+                        if (damageData.angle && damageData.thrustForce) {
+                            if (damageData.angle < 180) {
+                                blue_slime.angle = damageData.angle;
+                                blue_slime.thrustBack(damageData.thrustForce);
+                            } else {
+                                blue_slime.angle = damageData.angle;
+                                blue_slime.thrust(damageData.thrustForce);
+                            }
+                        }
+                    }
+                };
+
+                return blue_slime;
             },
 
             createBlueDemon: (x, y, health) => {

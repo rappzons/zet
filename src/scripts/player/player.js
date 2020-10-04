@@ -82,9 +82,10 @@ const Player = {
         this.playerSprite.on('animationupdate-melee-attack', (animation, frame, gameObject) => {
             // console.log("animationcomplete-melee-attack", window.performance.now(), frame, gameObject);
 
+
             // only check interaction when the correct animation frame is in play TOOD: can this be skipped in case of bad performance? perhaps don't rely on frame checking here...but if not the attack will continue to hit as long as the animation is playing
             if (frame.textureFrame === playerCharacter.meleeAttack.animationKey) {
-                console.log("animationcomplete-melee-attack DONE");
+               // console.log("animationcomplete-melee-attack DONE");
                 this.checkAttackInteraction(this.gameWorld);
             }
 
@@ -103,6 +104,13 @@ const Player = {
                 this.checkAttackInteraction(this.gameWorld);
                 this.state.delete(STATES.MELEE_ATTACKING);
             }
+        }, this);
+
+        this.playerSprite.on('animationstart-melee-attack', (animation, frame) => {
+            console.log("Play attack SOUND NOW!", window.performance.now(), frame);
+
+            gameWorld.fxFactory['sword-swing'].play();
+
         }, this);
 
         this.cursors = gameWorld.input.keyboard.createCursorKeys();
@@ -144,6 +152,8 @@ const Player = {
             }
         }
     },
+
+
 
     getVelocity() {
         if (this.playerSprite && this.playerSprite.body && this.playerSprite.body.velocity) {
@@ -338,6 +348,8 @@ const Player = {
 
                             if (hit) {
                                 console.log("Player whacked: ", part, obj);
+                                gameWorld.fxFactory['hit-ball'].play();
+
                                 this.status.xp = this.status.xp + 1;
 
                                 const damageData = {
