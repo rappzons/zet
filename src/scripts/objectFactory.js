@@ -96,6 +96,13 @@ export default function ObjectFactory(gameEngine) {
 
                 ball.setCircle(radius);
 
+
+                ball.setFriction(0.2,0.001,0.2);
+                ball.setMass(10);
+                ball.setDensity(0.002);
+                ball.setBounce(0.5);
+                ball.setFriction(0.4,0.001,0.4);
+
                 ball.anims.play('virus-ball-healthy', true);
 
                 ball.on('animationcomplete', (animation, frame) => {
@@ -142,18 +149,37 @@ export default function ObjectFactory(gameEngine) {
 
             spawnBlueSlime: (x, y, health) => {
 
-                const blue_slime = gameEngine.matter.add.sprite(x, y, 'blue_slime', null, {isStatic: true});
+                const blue_slime = gameEngine.matter.add.sprite(x, y, 'blue_slime', null, {isStatic: true}, {
+                    scale: { x: 2, y:2},
+                    density: 100,
+                    mass:100,
+                    friction:100
+                });
 
                 console.log("Spawning blue slime at ",x, y);
 
-                blue_slime.setRectangle(25,15);
+                blue_slime.scale = 2;
+                blue_slime.setRectangle(60,30);
+                blue_slime.setOrigin(0.5, 0.7);
+                blue_slime.setFriction(1,0.01,1);
+                blue_slime.setMass(120);
+                blue_slime.setDensity(0.9);
+                blue_slime.setBounce(0.3);
+
+
+                console.log("blue body", blue_slime.body);
+
                 blue_slime.anims.play('blue-slime-idle', true);
 
                 blue_slime.on('animationcomplete', (animation, frame) => {
                     if (animation.key === 'blue-slime-destroy') {
                         blue_slime.destroy();
                     }
+                    else if(animation.key === 'blue-slime-hurt') {
+                        blue_slime.anims.play('blue-slime-idle');
+                    }
                 }, this);
+
 
 
                 blue_slime.body.zData = {
@@ -169,6 +195,7 @@ export default function ObjectFactory(gameEngine) {
                             blue_slime.anims.play('blue-slime-destroy', true);
                         } else {
                             blue_slime.anims.play('blue-slime-hurt', true);
+
                         }
 
                         blue_slime.body.zData.zHealth = blue_slime.body.zData.zHealth - damageData.damage;
@@ -185,6 +212,9 @@ export default function ObjectFactory(gameEngine) {
                                 blue_slime.thrust(damageData.thrustForce);
                             }
                         }
+                    },
+                    onGameUpdate: (slimesGameWorld) => {
+                       blue_slime.angle = 0;
                     }
                 };
 

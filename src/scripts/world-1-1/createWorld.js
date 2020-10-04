@@ -50,11 +50,8 @@ export default class Level1_1Scene extends Scene {
         this.sound.audioPlayDelay = 0.0;
 
         this.fxFactory = {
-            // TODO: tried Howler, Native html5 Audio support but always a delay :(
-            // perhaps its my mac + browser???
-            // I think this has to do with the fact that there is an animation ongoing and it must finish before the play sound event is emitted...
-            //start this in a separate thread? setTimeout 0 perhaps?
-            //'sword-swing' : new Howl({src: ['./assets/sounds/sword-swing-3.mp3']}),
+
+            // could use Phasers built in sound manager...
             //'hit-ball' : this.sound.add('sword-swing'),
             'sword-swing' : new Audio('./assets/sounds/sword-swing-3.mp3'),
             'hit-ball' : new Audio('./assets/sounds/hit-ball.wav'),
@@ -119,12 +116,21 @@ export default class Level1_1Scene extends Scene {
     createBall() {
         if(random(1,3) === 1) {
             return this.objectFactory._.spawnBlueSlime(random(100, 800), -100, 10);
-        }
+       }
 
         return this.objectFactory._.createInteractiveBall(random(100,800),-100, 10,'virus_ball', 100);
     }
+
     update() {
        this.player.onGameUpdate(this);
+
+       if(this.children) {
+           this.children.list.forEach((obj) => {
+               if (obj?.body?.zData?.onGameUpdate) {
+                   obj.body.zData.onGameUpdate(this);
+               }
+           });
+       }
     }
 
 }

@@ -1,3 +1,7 @@
+- Code
+  - Refactor objectFactory to create enemy types instead of hardcoded enemies. Start with the virus-bal and the slime, should be one factory method.
+  
+
 - Movement
   - Slide under stuff, press down should shrink the hitbox and animate a sliding player
   - Shoot or sword? go with sword for now....
@@ -9,6 +13,12 @@
    
   
 - Game
+  - medieval dungeon cleaner? Eggs and stuff are dropped down in a hole
+    and the dude needs to hack away until he can get saved. slime, slugs, shit, eggs (with spawning enemies) will fall down...
+    have a creature-meter or something that you need to kep down.
+    
+    AND multi player: have two dungeons on the same screen and you can toss the enemies you get to your opponent.
+    or co-op and help out clearing out the dungenon...
   - Game plot :)
     ideas:
     Use the physics!!! Not so much hack and slash or run and shoot, use physics in a "random" 

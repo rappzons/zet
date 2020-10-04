@@ -231,7 +231,8 @@ const Player = {
 
         //TODO: this slows down/speeds up animation frames based on velocity, is very dependant on the graphical frames (the pics)
         if (this.state.has(STATES.MOVING) && !this.state.has(STATES.MELEE_ATTACKING)) {
-            this.playerSprite.anims.setTimeScale(inputData.absVelocityX / 4);
+
+            this.playerSprite.anims.setTimeScale(Math.max(inputData.absVelocityX / 4, 0.5));
         } else {
             this.playerSprite.anims.setTimeScale(1);
         }
