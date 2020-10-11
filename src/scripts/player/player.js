@@ -1,7 +1,7 @@
 import {Rect} from '../utils'
 import chooseCharacters from "../player/characters";
 
-const playerCharacter = chooseCharacters('adventure-guy');
+const playerCharacter = chooseCharacters('bingo');
 
 const WORLD_CONSTANTS = {
     //If velocity goes below this value its considered to be ZERO
@@ -51,11 +51,11 @@ const Player = {
             isSensor: true,
         });
 
-        this.meleeAttackHitBoxRight = gameWorld.matter.bodies.rectangle(30, 0, (playerCharacter.meleeAttack.width) * playerCharacter.scale, playerCharacter.meleeAttack.height * playerCharacter.scale, {
+        this.meleeAttackHitBoxRight = gameWorld.matter.bodies.rectangle(playerCharacter.meleeAttack.deltaX + 30, playerCharacter.meleeAttack.deltaY, (playerCharacter.meleeAttack.width) * playerCharacter.scale, playerCharacter.meleeAttack.height * playerCharacter.scale, {
             isSensor: true,
         });
 
-        this.meleeAttackHitBoxLeft = gameWorld.matter.bodies.rectangle(-30, 0, (playerCharacter.meleeAttack.width) * playerCharacter.scale, playerCharacter.meleeAttack.height * playerCharacter.scale, {
+        this.meleeAttackHitBoxLeft = gameWorld.matter.bodies.rectangle(-30 - playerCharacter.meleeAttack.deltaX, playerCharacter.meleeAttack.deltaY, (playerCharacter.meleeAttack.width) * playerCharacter.scale, playerCharacter.meleeAttack.height * playerCharacter.scale, {
             isSensor: true,
         });
 
@@ -107,7 +107,7 @@ const Player = {
         }, this);
 
         this.playerSprite.on('animationstart-melee-attack', (animation, frame) => {
-            console.log("Play attack SOUND NOW!", window.performance.now(), frame);
+            //console.log("Play attack SOUND NOW!", window.performance.now(), frame);
 
             gameWorld.fxFactory['sword-swing'].play();
 

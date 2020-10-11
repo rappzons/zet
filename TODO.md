@@ -3,6 +3,7 @@
   
 
 - Movement
+  - Character is colliding with the side-surface, making him not able to jump over walls that he "touches"....
   - Slide under stuff, press down should shrink the hitbox and animate a sliding player
   - Shoot or sword? go with sword for now....
   - Hurt animation
@@ -18,7 +19,7 @@
     have a creature-meter or something that you need to kep down.
     
     AND multi player: have two dungeons on the same screen and you can toss the enemies you get to your opponent.
-    or co-op and help out clearing out the dungenon...
+    or co-op and help out clearing out the dungenon...  
   - Game plot :)
     ideas:
     Use the physics!!! Not so much hack and slash or run and shoot, use physics in a "random" 
@@ -28,4 +29,21 @@
   - Build overall game state: Menu, Paused, InGame, Level:1 ...etc..etc.
   
   ...  
+- Enemies  
+  1. enemies&players: walk through each other
+  2. only hurt when one of them is attacking
+  3. hurt -> force back
+  4. health bars over all enemies
+  
+  AI
+  1. Sentry enemy: fixed pos, hit when player is within range. timed animation (player should be able to avoid if he is fast)
+   -> start with the blue deamon guy
+   
+  2. Pasing enemy: walks to A<->B and hits enemy when in range
+  
+  3. Flying Homing enemy: targets the player and goes through all world objects
+  
+  4. walking homing enemy: targets the player and collides with walls
+  
+  5. Boss/special. ...
     

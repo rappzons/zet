@@ -18,6 +18,10 @@ export default function ObjectFactory(gameEngine) {
                     './assets/sprites/enemies/blue-slime.png',
                     {frameWidth: 32, frameHeight: 25});
 
+                gameEngine.load.spritesheet('test_dummy',
+                    './assets/sprites/test-dummy.png',
+                    {frameWidth: 150, frameHeight: 96});
+
             },
 
             load: () => {
@@ -79,10 +83,17 @@ export default function ObjectFactory(gameEngine) {
                             frameRate: 7
                         },
                         {
-                            key: 'blue-demon-idle',
+                            key: 'blue_demon-idle',
                             frames: gameEngine.anims.generateFrameNumbers('blue_demon', {start: 0, end: 5}),
                             repeat: -1,
                             frameRate: 7
+
+                        },
+                        {
+                            key: 'test_dummy-idle',
+                            frames: gameEngine.anims.generateFrameNumbers('test_dummy', {start: 0, end: 3}),
+                            repeat: -1,
+                            frameRate: 1
 
                         },
                     ];
@@ -99,9 +110,9 @@ export default function ObjectFactory(gameEngine) {
 
                 ball.setFriction(0.2,0.001,0.2);
                 ball.setMass(10);
-                ball.setDensity(0.002);
+                ball.setDensity(0.03);
                 ball.setBounce(0.5);
-                ball.setFriction(0.4,0.001,0.4);
+                ball.setFriction(0.4,0.01,0.4);
 
                 ball.anims.play('virus-ball-healthy', true);
 
@@ -151,9 +162,9 @@ export default function ObjectFactory(gameEngine) {
 
                 const blue_slime = gameEngine.matter.add.sprite(x, y, 'blue_slime', null, {isStatic: true}, {
                     scale: { x: 2, y:2},
-                    density: 100,
-                    mass:100,
-                    friction:100
+                    density: 0.9,
+                    mass:40,
+                    friction: 0.8
                 });
 
                 console.log("Spawning blue slime at ",x, y);
@@ -221,33 +232,33 @@ export default function ObjectFactory(gameEngine) {
                 return blue_slime;
             },
 
-            createBlueDemon: (x, y, health) => {
+            createStaticEnemy: (x, y, enemyId, health) => {
 
-                const demon = gameEngine.matter.add.sprite(x, y, 'blue_demon', null, {isStatic: true});
+                const demon = gameEngine.matter.add.sprite(x, y, enemyId, null, {isStatic: true});
 
-                demon.anims.play('blue-demon-idle', true);
+                demon.anims.play(`${enemyId}-idle`, true);
 
-                demon.on('animationcomplete-demon-destroy', (animation, frame) => {
+                demon.on(`animationcomplete-${enemyId}-destroy`, (animation, frame) => {
                         demon.destroy();
                 }, this);
 
 
                 demon.body.zData = {
-                    zType: ['melee-vulnerable', 'enemy'],
+                    zType: ['melee-vulnerable', 'enemy','dead-object'],
                     zHealth: health,
                     // Handle onDamage
                     onDamage: (damageData) => {
 
                         if (demon.body.zData.zHealth < 0) {
                             // Trigger death animation and the listener above will call destroy when finished
-                            demon.anims.play('demon-destroy', true);
+                            demon.anims.play(`${enemyId}-destroy`, true);
                         } else {
-                            demon.anims.play('demon-damaged', true);
+                            demon.anims.play(`${enemyId}-damaged`, true);
                         }
 
                         demon.body.zData.zHealth = demon.body.zData.zHealth - damageData.damage;
 
-                        console.log("Blue demon got hit! Health left:", demon.body.zData.zHealth );
+                        console.log("enemy got hit! Health left:", demon.body.zData.zHealth );
                         // Got damaged by a thrust force, apply it
                         if (damageData.angle && damageData.thrustForce) {
                             // blue demons are not affected by thrust force for now

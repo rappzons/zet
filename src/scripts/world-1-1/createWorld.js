@@ -60,8 +60,14 @@ export default class Level1_1Scene extends Scene {
 
         const objects = random(5, 10);
        for(var i=0; i<objects; i++) {
-            this.createGround('stone_ground', random(0,this.game.canvas.width) - 200 ,random(300,this.game.canvas.height-200), 48 * random(1,10), 21);
+      //      this.createGround('stone_ground', random(0,this.game.canvas.width) - 200 ,random(300,this.game.canvas.height-200), 48 * random(1,10), 21);
        }
+
+        this.createGround('stone_ground', 300 , 750, 100, 120);
+
+        this.createGround('stone_ground', 500 , 650, 80, 40);
+
+        this.createGround('stone_ground', 700 , 750, 100, 120);
 
         console.log("Created World 1-1, starting to spawn virus balls");
         this.time.addEvent({ delay: 3250, callback: this.createBall.bind(this), callbackScope: this, repeat: 4012 });
@@ -89,8 +95,8 @@ export default class Level1_1Scene extends Scene {
             });
         });
 
-        console.log("Created World 1-1, adding a blue demon");
-        this.objectFactory._.createBlueDemon(this.game.canvas.width - 150, this.game.canvas.height-200, 500);
+        console.log("Created World 1-1, adding a static enemy");
+        this.objectFactory._.createStaticEnemy(this.game.canvas.width - 150, this.game.canvas.height-200,'test_dummy', 500);
     }
 
     createGround(image, x,y,w,h) {
@@ -101,7 +107,7 @@ export default class Level1_1Scene extends Scene {
             isStatic: true,
             render: {
                 sprite: {
-                    yOffset: 0.25
+                    //yOffset: 0.1
                 }
             }
         }).setStatic(true);
