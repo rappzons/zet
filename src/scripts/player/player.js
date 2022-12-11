@@ -1,7 +1,7 @@
 import {Rect} from '../utils'
 import chooseCharacters from "../player/characters";
 
-const playerCharacter = chooseCharacters('bingo');
+const playerCharacter = chooseCharacters('adventure-guy');
 
 const WORLD_CONSTANTS = {
     //If velocity goes below this value its considered to be ZERO
